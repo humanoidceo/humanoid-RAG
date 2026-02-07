@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>humanoid RAG: A Discourse-Aware Hierarchical Retrieval-Augmented Generation (RAG) System with Multi-Level Question Planning</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* arXiv-like style with LTR direction */
+        body {
+            direction: ltr;
+            text-align: left;
+            font-family: 'Times New Roman', 'Traditional Arabic', serif;
+            max-width: 650px;
+            margin: 2em auto;
+            padding: 0 1em;
+            line-height: 1.6;
+            background: #ffffff;
+            color: #000000;
+            font-size: 11pt;
+        }
+        
+        /* Paper header - arXiv style */
+        .paper-header {
+            text-align: center;
+            margin-bottom: 2em;
+            padding-bottom: 1em;
+        }
+        .paper-title {
+            font-size: 17pt;
+            font-weight: bold;
+            margin-bottom: 1.5em;
+            line-height: 1.3;
+        }
+        .author-info {
+            font-size: 12pt;
+            margin: 0.5em 0;
+        }
+        .affiliation {
+            font-size: 10pt;
+            color: #000;
+            font-style: italic;
+            margin: 0.3em 0;
+        }
+        
+        /* Abstract - arXiv style */
+        .abstract-section {
+            margin: 2em 0;
+            padding: 0;
+            background: transparent;
+            border: none;
+        }
+        .abstract-title {
+            font-weight: bold;
+            font-size: 12pt;
+            text-align: center;
+            margin-bottom: 0.5em;
+        }
+        .abstract-section p {
+            text-align: justify;
+            text-justify: inter-word;
+            margin: 0.8em 0;
+        }
+        
+        /* Sections - arXiv style */
+        .section {
+            margin: 1.5em 0;
+        }
+        .section-title {
+            font-size: 13pt;
+            font-weight: bold;
+            margin: 1.2em 0 0.8em 0;
+        }
+        .subsection-title {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 1em 0 0.6em 0;
+            font-style: italic;
+        }
+        .subsubsection-title {
+            font-size: 11pt;
+            font-weight: bold;
+            margin: 0.8em 0 0.5em 0;
+        }
+        
+        /* Paragraphs */
+        p {
+            text-align: justify;
+            text-justify: inter-word;
+            margin: 0.8em 0;
+            text-indent: 0;
+        }
+        /* Figures and images */
+        .figure {
+            text-align: center;
+            margin: 1em 0;
+            padding: 0;
+            background: transparent;
+            border: none;
+        }
+        .figure-caption {
+            margin-top: 0.5em;
+            font-style: italic;
+            font-size: 10pt;
+        }
+        
+        /* Tables - arXiv style */
+        .table {
+            width: 100%;
+            margin: 1em auto;
+            border-collapse: collapse;
+        }
+        .table th, .table td {
+            border: 1px solid #000;
+            padding: 0.3em 0.5em;
+            text-align: center;
+            font-size: 10pt;
+        }
+        .table th {
+            background: transparent;
+            font-weight: bold;
+            border-bottom: 2px solid #000;
+        }
+        table {
+            margin: 1em auto;
+            border-collapse: collapse;
+        }
+        table th, table td {
+            border: 1px solid #000;
+            padding: 0.3em 0.5em;
+            font-size: 10pt;
+        }
+        table th {
+            font-weight: bold;
+            border-bottom: 2px solid #000;
+        }
+        
+        /* Equations */
+        .equation {
+            text-align: center;
+            margin: 1em 0;
+            font-style: italic;
+        }
+        
+        /* Algorithms */
+        .algorithm {
+            margin: 1em 0;
+            padding: 0.5em;
+            border: 1px solid #000;
+            background: transparent;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            direction: ltr;
+            text-align: left;
+        }
+        
+        /* Definitions and examples */
+        .definition {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            border-left: 3px solid #000;
+            background: transparent;
+        }
+        
+        /* Notes */
+        .note {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            border: 1px solid #000;
+            background: #f9f9f9;
+            font-size: 10pt;
+        }
+        
+        /* Warnings */
+        .warning {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            border: 2px solid #000;
+            background: transparent;
+            font-weight: bold;
+        }
+        
+        /* References */
+        .references {
+            margin-top: 2em;
+        }
+        .reference-item {
+            margin: 0.5em 0;
+            padding-left: 2em;
+            text-indent: -2em;
+            font-size: 9pt;
+            text-align: left;
+        }
+        
+        /* Lists */
+        ul, ol {
+            margin: 0.5em 0;
+            padding-left: 2em;
+        }
+        li {
+            margin: 0.3em 0;
+        }
+        
+        /* Code */
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            direction: ltr;
+            display: inline;
+            background: transparent;
+        }
+        pre {
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            margin: 1em 0;
+            padding: 0.5em;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+            background: transparent;
+            border: 1px solid #ccc;
+        }
+        
+        /* Additional styles to better resemble arXiv */
+        strong {
+            font-weight: bold;
+        }
+        em {
+            font-style: italic;
+        }
+        h1, h2, h3, h4 {
+            font-weight: bold;
+            line-height: 1.3;
+        }
+        
+        /* Page numbers - arXiv style */
+        @media print {
+            body {
+                margin: 0;
+                padding: 2em 1em;
+            }
+            
+            @page {
+                margin: 2cm;
+            }
+            
+            /* Page number with JavaScript on each printed page */
+            .print-page-number {
+                display: block;
+                position: fixed;
+                bottom: 1cm;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 10pt;
+                text-align: center;
+            }
+        }
+        
+        /* Show page number in web only - hidden in print */
+        .page-number {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10pt;
+            color: #666;
+            background: white;
+            padding: 5px 15px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            z-index: 1000;
+        }
+        
+        /* Header with arXiv identifier - hidden in print */
+        .arxiv-header {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            font-size: 9pt;
+            color: #666;
+            background: white;
+            padding: 5px;
+            border: 1px solid #ddd;
+            z-index: 1000;
+        }
+        
+        /* Hide labels in print */
+        @media print {
+            .page-number {
+                display: none !important;
+            }
+            .arxiv-header {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Page number -->
+    <div class="page-number" id="pageNumber">Page 1</div>
+    
+    <!-- arXiv Header (optional) -->
+    <div class="arxiv-header">
+        arXiv:XXXX.XXXXX [cs.CL]
+    </div>
+    <div class="paper-header">
+        <div class="paper-title">
+            humanoid RAG: A Discourse-Aware Hierarchical Retrieval-Augmented Generation (RAG) System<br>
+            with Multi-Level Question Planning
+        </div>
+        <div class="author-info">
+            Fardin  Ibrahimi
+        </div>
+        <div class="affiliation">
+            B.Sc. in Computer Science
+        </div>
+        <div class="affiliation">
+            Independent Research
+        </div>
+        <div class="affiliation" style="margin-top: 15px; font-size: 0.9em;">
+            February 2026
+        </div>
+    </div>
+
+    <div class="abstract-section">
+        <div class="abstract-title">Abstract</div>
+        <p>
+            Retrieval-Augmented Generation (RAG) systems face fundamental limitations in answering complex questions that require multi-step reasoning.
+            This paper introduces humanoid RAG: a novel framework that combines hierarchical question planning with discourse modeling. Our system has two levels:
+            (1) a high-level planner that decomposes complex questions, verifies information sufficiency, and generates supplemental questions, and (2) low-level searchers that perform
+            hybrid retrieval (sparse, dense, and web). Moreover, we apply discourse modeling at two levels: rhetorical structure trees (RST) at the section level to identify nucleus information,
+            and an inter-section rhetorical graph to model relations such as contradiction and elaboration. This discourse structure guides response planning and ensures coherent and accurate generation.
+        </p>
+        <p>
+            <strong>Important Note:</strong> This research has only been tested with the LLaMA 7B model on private data.
+            No evaluation has been conducted on public benchmark datasets.
+        </p>
+        <p>
+            <strong>Keywords:</strong> Retrieval-Augmented Generation (RAG), discourse modeling, hierarchical planning, question answering, multi-step reasoning
+        </p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">1. Introduction</div>
+        
+        <p>
+            Large language models (LLMs) have shown remarkable capabilities in text generation, but they suffer from fundamental limitations: outdated parametric knowledge, hallucination,
+            and lack of access to domain-specific information. Retrieval-Augmented Generation (RAG) systems mitigate these limitations by combining external document retrieval and LLM-based generation.
+            However, existing RAG systems perform poorly on complex questions that require multi-step reasoning, integration of conflicting information, or decisions about information sufficiency.
+        </p>
+
+        <div class="subsection-title">1.1 Motivation</div>
+        <p>
+            Real-world questions often require decomposition into subproblems, iterative retrieval, and careful integration of information. For example, a question like "Are Android and iOS both mobile OS?"
+            requires identifying two sub-questions, retrieving information about each OS, and then comparing them. Traditional single-step RAG systems fail at such tasks.
+        </p>
+        <p>
+            In addition, retrieved documents may contain contradictions (e.g., old vs. new information), provide incomplete information, or include low-importance sentences that mislead the LLM.
+            Understanding discourse relations within and across documents is essential for generating accurate and coherent answers.
+        </p>
+
+        <div class="subsection-title">1.2 Main Contributions</div>
+        <p>We present humanoid RAG, a novel framework that:</p>
+        <ol>
+            <li><strong>Hierarchical Planning:</strong> a two-level architecture with a high-level planner for question decomposition, sufficiency verification, and information supplementation, and low-level searchers for hybrid retrieval (sparse, dense, web).</li>
+            <li><strong>Two-Level Discourse Modeling:</strong> intra-section RST trees to identify nucleus information, and inter-section rhetorical graphs to model relations such as contradiction and elaboration.</li>
+            <li><strong>Discourse-Driven Planning:</strong> response plan generation based on discourse structure to ensure coherence and accuracy.</li>
+        </ol>
+
+        <div class="subsection-title">1.3 Paper Organization</div>
+        <p>
+            The rest of this paper is organized as follows: Section 2 reviews related work.
+            Section 3 explains the methodology. Section 4 presents architectural details.
+            Section 5 provides a theoretical analysis. Section 6 discusses limitations.
+            Section 7 concludes.
+        </p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. Related Work</div>
+
+        <div class="subsection-title">2.1 Retrieval-Augmented Generation (RAG) Systems</div>
+        <p>
+            RAG systems improve the accuracy and attribution of LLMs by combining document retrieval and text generation.
+            Early works such as the original RAG and later works like Self-RAG and FLARE have introduced improvements in retrieval and generation.
+            However, these approaches mainly focus on single-step questions and are weak in multi-step reasoning.
+        </p>
+
+        <div class="subsection-title">2.2 Multi-Step Reasoning</div>
+        <p>
+            Methods such as IRCoT and MindSearch extend RAG for multi-step reasoning by decomposing complex questions into sub-questions and performing iterative retrieval.
+            Our work goes beyond these approaches by introducing hierarchical planning and discourse modeling.
+        </p>
+
+        <div class="subsection-title">2.3 Discourse Modeling</div>
+        <p>
+            Rhetorical Structure Theory (RST) provides a framework for analyzing text structure. Recent works have used RST to improve summarization and text generation.
+            We apply RST in RAG to identify nucleus information and improve document fusion.
+        </p>
+
+        <div class="subsection-title">2.4 Foundational Works</div>
+        <p>
+            This research is based on two main arXiv papers:
+        </p>
+        <ol>
+            <li><strong>LevelRAG:</strong> a hierarchical Retrieval-Augmented Generation (RAG) approach</li>
+            <li><strong>DiscoRAG:</strong> a discourse-aware Retrieval-Augmented Generation (RAG) approach</li>
+        </ol>
+        <p>
+            humanoid RAG combines and extends these two approaches to create a unified framework.
+        </p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. Methodology</div>
+
+        <div class="subsection-title">3.1 Problem Definition</div>
+        <p>
+            Consider a question <em>q</em> and a set of documents <em>D</em>. The goal is to produce an answer
+            <em>a</em> that accurately responds to <em>q</em> and is grounded in information retrieved from <em>D</em>.
+            For multi-step questions, <em>q</em> should be decomposed into sub-questions
+            {<em>q</em>₁, <em>q</em>₂, ..., <em>q</em>ₙ} each requiring separate retrieval and processing.
+        </p>
+
+        <div class="subsection-title">3.2 Architecture Overview</div>
+        <p>
+            humanoid RAG consists of a two-level architecture:
+        </p>
+        <ul>
+            <li><strong>High level (planner):</strong> responsible for question decomposition, summarization, sufficiency verification, and supplementation</li>
+            <li><strong>Low level (searchers):</strong> three parallel searchers: sparse (keyword-based), dense (semantic), and web (internet-based)</li>
+        </ul>
+
+        <div class="figure">
+            <pre style="text-align: center; font-family: monospace;">
+┌──────────────────────────────────────────────┐
+│                  User Query                  │
+└────────────────┬─────────────────────────────┘
+                 ▼
+┌────────────────────────────────────────────────┐
+│             High-Level Planner                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐     │
+│  │Decompose │→│ Summarize │→│  Verify  │     │
+│  └──────────┘  └──────────┘  └──────────┘     │
+│                      ↓                         │
+│               ┌──────────┐                     │
+│               │Supplement│                     │
+│               └──────────┘                     │
+└────┬────────────┬────────────┬────────────────┘
+     │            │            │
+┌────▼────┐  ┌───▼────┐  ┌────▼────┐
+│Searcher │  │Searcher│  │Searcher│
+│ sparse  │  │ dense  │  │  web   │
+└────┬────┘  └───┬────┘  └────┬────┘
+     │            │            │
+     └────────────┼────────────┘
+                  ▼
+         ┌──────────────────┐
+         │ Discourse Modeling│
+         └──────────────────┘
+                  ▼
+         ┌──────────────────┐
+         │ Response Generation│
+         └──────────────────┘
+            </pre>
+            <div class="figure-caption">Figure 1: Architecture overview of humanoid RAG</div>
+        </div>
+
+        <div class="subsection-title">3.3 Workflow</div>
+        <p>The humanoid RAG workflow includes the following steps:</p>
+        <ol>
+            <li><strong>Decomposition (Decompose):</strong> decompose <em>q</em> into {<em>q</em>₁, ..., <em>q</em>ₙ}</li>
+            <li><strong>Retrieval (Retrieve):</strong> for each <em>qᵢ</em>, retrieve in parallel from three sources</li>
+            <li><strong>Discourse Modeling (Discourse Modeling):</strong> build RST trees and a rhetorical graph</li>
+            <li><strong>Summarization (Summarize):</strong> extract nucleus information from each section</li>
+            <li><strong>Verification (Verify):</strong> check information sufficiency to answer <em>q</em></li>
+            <li><strong>Supplementation (Supplement):</strong> if information is insufficient, generate additional questions</li>
+            <li><strong>Planning (Plan):</strong> create a response plan based on the rhetorical graph</li>
+            <li><strong>Generation (Generate):</strong> generate the final answer <em>a</em></li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <div class="section-title">4. Architecture Details</div>
+
+        <div class="subsection-title">4.1 High-Level Planner</div>
+        
+        <div class="subsubsection-title">4.1.1 Decomposition Operation</div>
+        <p>
+            The planner uses an LLM to decompose a complex question <em>q</em> into a set of atomic sub-questions
+            {<em>q</em>₁, <em>q</em>₂, ..., <em>q</em>ₙ}. This operation is performed with a prompt designed to ask the LLM
+            to split the question into simpler questions.
+        </p>
+        
+        <div class="definition">
+            <strong>Decomposition Example:</strong>
+            <p><strong>Question:</strong> "Can both smartphone and laptop connect to Wi-Fi?"</p>
+            <p><strong>Sub-questions:</strong></p>
+            <ul>
+                <li>q₁: "Can a smartphone connect to Wi-Fi?"</li>
+                <li>q₂: "Can a laptop connect to Wi-Fi?"</li>
+                <li>q₃: "Do both devices support Wi-Fi connectivity?"</li>
+            </ul>
+        </div>
+
+        <div class="subsubsection-title">4.1.2 Summarization Operation</div>
+        <p>
+            For each sub-question <em>qᵢ</em> and its retrieved passages, the planner produces a summary
+            <em>sᵢ</em> that extracts key information. This operation uses RST trees to prioritize nucleus sentences.
+        </p>
+
+        <div class="subsubsection-title">4.1.3 Verification Operation</div>
+        <p>
+            The planner checks whether the collected summaries {<em>s</em>₁, ..., <em>sₙ</em>} are sufficient
+            to answer the main question <em>q</em>. If information is insufficient, the system moves to the
+            supplementation operation.
+        </p>
+
+        <div class="subsubsection-title">4.1.4 Supplementation Operation</div>
+        <p>
+            If information is insufficient, the planner generates new supplemental questions and repeats the
+            retrieval-summarization-verification cycle. This process continues until information is sufficient.
+        </p>
+
+        <div class="subsection-title">4.2 Low-Level Searchers</div>
+
+        <div class="subsubsection-title">4.2.1 Sparse Searcher</div>
+        <p>
+            The sparse searcher uses the BM25 algorithm for keyword-based retrieval.
+            It includes three feedback operations:
+        </p>
+        <ul>
+            <li><strong>Extend:</strong> add related keywords to increase coverage</li>
+            <li><strong>Filter:</strong> remove irrelevant phrases with the NOT operator</li>
+            <li><strong>Emphasize:</strong> increase the weight of key keywords</li>
+        </ul>
+
+        <div class="definition">
+            <strong>Sparse Query Example:</strong>
+            <pre style="direction: ltr; text-align: left;">
+Initial Query: "Wi-Fi" connection
+↓ (if results are weak)
+Extended: "Wi-Fi" connection "wireless"
+↓ (if still weak)
+Filtered: "Wi-Fi" connection -Bluetooth -cable
+↓ (if needed)
+Emphasized: "Wi-Fi"^2.0 connection
+            </pre>
+        </div>
+
+        <div class="subsubsection-title">4.2.2 Dense Searcher</div>
+        <p>
+            The dense searcher uses embedding models for semantic retrieval.
+            To improve retrieval, we use the HyDE (Hypothetical Document Embeddings) technique:
+            the LLM generates a hypothetical document that contains the answer, then the embedding of that
+            document is used to retrieve similar real documents.
+        </p>
+
+        <div class="subsubsection-title">4.2.3 Web Searcher</div>
+        <p>
+            The web searcher uses web search APIs (e.g., Bing Search) to access current and broad information.
+            This searcher is especially useful for questions that require up-to-date information or information
+            outside the local dataset.
+        </p>
+
+        <div class="subsection-title">4.3 Discourse Modeling</div>
+
+        <div class="subsubsection-title">4.3.1 Intra-Section RST Trees</div>
+        <p>
+            For each retrieved passage, we build a Rhetorical Structure Theory (RST) tree that represents its
+            internal discourse structure. The RST tree splits sentences into nucleus and satellite:
+        </p>
+        <ul>
+            <li><strong>Nucleus:</strong> sentences containing core, essential information</li>
+            <li><strong>Satellite:</strong> sentences containing supporting or auxiliary information</li>
+        </ul>
+
+        <div class="definition">
+            <strong>RST Tree Example:</strong>
+            <p>Text: "Smartphones run on batteries. [Sentence 1] A charger is used to refill the battery. [Sentence 2]
+            But without power, a charger does not work. [Sentence 3] That is why a power bank is useful when traveling.
+            [Sentence 4]"</p>
+            <ul>
+                <li>Nucleus: Sentence 3 (main information)</li>
+                <li>Satellite: Sentences 1, 2, 4 (background and consequence)</li>
+            </ul>
+        </div>
+
+        <div class="subsubsection-title">4.3.2 Inter-Section Rhetorical Graph</div>
+        <p>
+            To model relationships between different sections, we build a rhetorical graph <em>G</em> = (<em>V</em>, <em>E</em>)
+            where each node <em>v</em> ∈ <em>V</em> represents a section and each edge <em>e</em> ∈ <em>E</em> represents a rhetorical relation.
+            The main relations are:
+        </p>
+        <ul>
+            <li><strong>CONTRADICTS:</strong> sections contain conflicting information</li>
+            <li><strong>ELABORATES:</strong> one section elaborates another</li>
+            <li><strong>BACKGROUND_FOR:</strong> one section provides background for another</li>
+            <li><strong>CAUSES:</strong> one section is the cause of another</li>
+        </ul>
+
+        <div class="definition">
+            <strong>Rhetorical Graph Example:</strong>
+            <p>Question: "Do all USB cables support both charging and data transfer?"</p>
+            <ul>
+                <li>Section 1 (general claim): "All USB cables support both charging and data transfer"</li>
+                <li>Section 2 (exception): "Some USB cables are made only for charging"</li>
+                <li>Section 3 (additional explanation): "High-quality USB cables usually support both charging and data"</li>
+            </ul>
+            <p>Relations:</p>
+            <ul>
+                <li>Section 1 → Section 2: CONTRADICTS</li>
+                <li>Section 3 → Section 1: ELABORATES</li>
+                <li>Section 2 → Section 3: BACKGROUND_FOR</li>
+            </ul>
+        </div>
+
+        <div class="subsubsection-title">4.3.3 Discourse-Based Planning</div>
+        <p>
+            Based on the rhetorical graph, the system creates a plan for response generation. This plan specifies
+            the order of information, how to handle contradictions, and appropriate transition words.
+        </p>
+
+        <div class="algorithm">
+            <strong>Algorithm 1: Discourse-Based Planning</strong>
+            <pre>
+Input: rhetorical graph G = (V, E)
+Output: response plan P
+
+1: Initialize plan P = []
+2: Identify contradictions in G
+3: For each contradiction:
+4:    Add historical context (BACKGROUND) to P
+5:    Add contrast marker ("but", "however") to P
+6:    Add current information to P
+7: Identify elaborations in G
+8: For each elaboration:
+9:    Add main claim to P
+10:   Add elaborating details to P
+11: Return P
+            </pre>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">5. Theoretical Analysis and Expected Benefits</div>
+
+        <div class="warning">
+            <strong>⚠️ Important Notice:</strong>
+            <p>
+                This section does not include empirical results from benchmark datasets. This research has only been tested on private data.
+                The content below describes the theoretical framework and expected benefits based on system design, not empirical results from scientific evaluation.
+            </p>
+        </div>
+
+        <div class="subsection-title">5.1 Theoretical Advantages of the Framework</div>
+        
+        <div class="subsubsection-title">5.1.1 Multi-Step Reasoning</div>
+        <p>
+            The hierarchical architecture of humanoid RAG is designed to handle multi-step questions:
+        </p>
+        <ul>
+            <li><strong>Question decomposition:</strong> complex questions are decomposed into atomic sub-questions</li>
+            <li><strong>Iterative retrieval:</strong> each sub-question is processed independently</li>
+            <li><strong>Sufficiency verification:</strong> the system checks whether the information is sufficient</li>
+            <li><strong>Supplementation:</strong> additional questions are generated as needed</li>
+        </ul>
+        <p>
+            <strong>Expected benefit:</strong> better performance on questions that require multiple reasoning steps,
+            such as comparative or inferential questions.
+        </p>
+
+        <div class="subsubsection-title">5.1.2 Hybrid Retrieval Collaboration</div>
+        <p>
+            Using three searchers simultaneously provides complementary advantages:
+        </p>
+        <ul>
+            <li><strong>Sparse searcher:</strong> precise for proper names, dates, and exact phrases</li>
+            <li><strong>Dense searcher:</strong> good for semantic understanding and conceptual questions</li>
+            <li><strong>Web searcher:</strong> access to current information and broad coverage</li>
+        </ul>
+        <p>
+            <strong>Expected benefit:</strong> higher retrieval coverage by combining complementary strengths, reducing
+            "not found" cases that occur in single-source methods.
+        </p>
+
+        <div class="subsubsection-title">5.1.3 Discourse Awareness</div>
+        <p>
+            Two-level discourse modeling provides several theoretical advantages:
+        </p>
+        <ul>
+            <li><strong>RST trees:</strong> identify nucleus information and reduce the "lost in the middle" effect</li>
+            <li><strong>Rhetorical graph:</strong> detect contradictions and prevent merging conflicting information</li>
+            <li><strong>Planning:</strong> produce coherent responses with logical structure</li>
+        </ul>
+        <p>
+            <strong>Expected benefit:</strong> higher accuracy in prioritizing information, better handling of contradictions,
+            and more coherent responses.
+        </p>
+
+        <div class="subsection-title">5.2 Conceptual Case Study</div>
+        
+        <div class="definition">
+            <strong>Example: "Are all TVs smart?"</strong>
+            
+            <p><strong>Standard RAG (expected behavior):</strong></p>
+            <p>It might retrieve a definition of "smart TV" and answer "yes" without considering the differences between old and new models.</p>
+            
+            <p><strong>humanoid RAG (expected behavior):</strong></p>
+            <ol>
+                <li><strong>Retrieval:</strong> multiple sources including category and release-time information
+                    <ul>
+                        <li>Section 1: "A smart TV can connect to the Internet and run apps"</li>
+                        <li>Section 2: "Old TVs only have video input and are not smart"</li>
+                        <li>Section 3: "Today many new TVs are smart"</li>
+                    </ul>
+                </li>
+                <li><strong>Discourse analysis:</strong> the distinction between old and new models is identified</li>
+                <li><strong>Planning:</strong> explain category differences, then summarize</li>
+                <li><strong>Generation:</strong> "No, not all TVs are smart. Old TVs are simple, but many new TVs are smart."</li>
+            </ol>
+            
+            <p><strong>Key insight:</strong> the system distinguishes between different product categories and provides a more accurate answer.</p>
+        </div>
+
+        <div class="subsection-title">5.3 Expected Component Contributions</div>
+        
+        <div class="subsubsection-title">5.3.1 High-Level Planner Operations</div>
+        <ul>
+            <li><strong>Decomposition:</strong> critical for breaking complex questions; expected to be most impactful for multi-step questions</li>
+            <li><strong>Summarization:</strong> compresses information while preserving key facts</li>
+            <li><strong>Verification:</strong> ensures that retrieved information is sufficient to answer the question</li>
+            <li><strong>Supplementation:</strong> fills information gaps by generating additional questions</li>
+        </ul>
+
+        <div class="subsubsection-title">5.3.2 Sparse Searcher Refinements</div>
+        <ul>
+            <li><strong>Extend:</strong> adds related keywords to expand search</li>
+            <li><strong>Filter:</strong> reduces noise by removing irrelevant phrases</li>
+            <li><strong>Emphasize:</strong> increases the importance of key phrases</li>
+            <li><strong>Expected benefit:</strong> more accurate entity retrieval compared to plain BM25</li>
+        </ul>
+
+        <div class="subsubsection-title">5.3.3 Discourse Components</div>
+        <ul>
+            <li><strong>RST trees:</strong> help prioritize important sentences, reducing the "lost in the middle" effect</li>
+            <li><strong>Rhetorical graphs:</strong> enable detection and resolution of contradictions</li>
+            <li><strong>Planning scheme:</strong> provides structured guidance for coherent generation</li>
+        </ul>
+
+    <div class="section">
+        <div class="section-title">6. Limitations and Considerations</div>
+
+        <div class="subsection-title">6.1 Evaluation Limitations</div>
+        
+        <div class="warning">
+            <strong>⚠️ Core Research Limitations:</strong>
+            <ul>
+                <li><strong>Model:</strong> only tested with LLaMA 7B</li>
+                <li><strong>Data:</strong> evaluated only on private data</li>
+                <li><strong>Benchmarks:</strong> not evaluated on public benchmark datasets (PopQA, NQ, TriviaQA, HotpotQA, 2WikiMultiHopQA)</li>
+                <li><strong>Comparison:</strong> no statistical comparison with baseline systems</li>
+                <li><strong>Ablations:</strong> no formal ablation studies to measure component contributions</li>
+            </ul>
+        </div>
+
+        <div class="subsection-title">6.2 Technical Limitations</div>
+        
+        <div class="subsubsection-title">6.2.1 Computational Complexity</div>
+        <p>
+            humanoid RAG incurs higher computational cost than simple RAG due to multiple LLM calls (for decomposition, summarization, verification, supplementation, and generation)
+            and discourse processing. This may increase response time and cost in production environments.
+        </p>
+
+        <div class="subsubsection-title">6.2.2 Discourse Parsing Accuracy</div>
+        <p>
+            Building RST trees and rhetorical graphs depends on the accuracy of the discourse parser. Errors in identifying rhetorical relations can lead to incorrect responses.
+            Parsing accuracy varies by domain and text quality.
+        </p>
+
+        <div class="subsubsection-title">6.2.3 Dependence on Prompt Engineering</div>
+        <p>
+            System performance heavily depends on the quality of prompts designed for each operation.
+            Poor prompts can lead to incorrect decomposition, insufficient summaries, or failed verification.
+        </p>
+
+        <div class="subsubsection-title">6.2.4 Retrieval Coverage</div>
+        <p>
+            Despite using three searchers, some relevant information may still be missed,
+            especially if it does not exist in the local dataset or is phrased in a way that does not match the query.
+        </p>
+
+        <div class="subsection-title">6.3 Practical Limitations</div>
+        
+        <div class="subsubsection-title">6.3.1 Latency</div>
+        <p>
+            The iterative nature of the system (decompose-retrieve-summarize-verify-supplement loop) can lead to significant latency,
+            especially for complex questions that require multiple iterations.
+        </p>
+
+        <div class="subsubsection-title">6.3.2 Cost</div>
+        <p>
+            Multiple LLM calls and retrieval operations can increase cost, especially when using commercial APIs.
+            For high-volume applications, this cost can be significant.
+        </p>
+
+        <div class="subsection-title">6.4 Future Work</div>
+        <p>Future work may include:</p>
+        <ul>
+            <li>Evaluation on public benchmark datasets</li>
+            <li>Ablation studies to precisely measure each component's contribution</li>
+            <li>Experiments with different language models (GPT-4, Claude, Mistral, etc.)</li>
+            <li>Optimization to reduce latency and cost</li>
+            <li>Improving discourse parsing accuracy</li>
+            <li>Developing caching techniques to reduce repeated LLM calls</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <div class="section-title">7. Implementation Guide</div>
+
+        <div class="subsection-title">7.1 Proposed Tech Stack</div>
+        
+        <div class="table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Suggested Tools</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Language model (planner)</strong></td>
+                        <td>LLaMA 7B, GPT-3.5-turbo, Mistral-7B, Claude</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sparse searcher</strong></td>
+                        <td>Elasticsearch, BM25 (rank_bm25), Apache Solr</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dense searcher</strong></td>
+                        <td>FAISS, Pinecone, Weaviate, ChromaDB, sentence-transformers</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Web searcher</strong></td>
+                        <td>Bing Search API, SerpAPI, Google Custom Search</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Discourse parsing</strong></td>
+                        <td>Custom transformer models, NLI models (RoBERTa-NLI)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Framework</strong></td>
+                        <td>LangChain, LlamaIndex, Haystack</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="subsection-title">7.2 Proposed Architecture</div>
+        
+        <div class="algorithm">
+            <strong>Algorithm 2: humanoid RAG Pipeline</strong>
+            <pre>
+class HumanoidRAG:
+    def __init__(self, llm, sparse, dense, web):
+        self.planner = HighLevelPlanner(llm)
+        self.sparse_searcher = SparseSearcher(sparse)
+        self.dense_searcher = DenseSearcher(dense)
+        self.web_searcher = WebSearcher(web)
+        self.discourse_parser = DiscourseParser()
+    
+    def answer(self, query):
+        # Step 1: Decompose
+        sub_queries = self.planner.decompose(query)
+        
+        # Step 2: Retrieve
+        all_chunks = []
+        for sq in sub_queries:
+            sparse_chunks = self.sparse_searcher.search(sq)
+            dense_chunks = self.dense_searcher.search(sq)
+            web_chunks = self.web_searcher.search(sq)
+            all_chunks.extend([sparse_chunks, dense_chunks, web_chunks])
+        
+        # Step 3: Discourse modeling
+        rst_trees = self.discourse_parser.build_rst_trees(all_chunks)
+        rhetorical_graph = self.discourse_parser.build_graph(all_chunks)
+        
+        # Step 4: Summarize
+        summaries = []
+        for sq, chunks in zip(sub_queries, grouped_chunks):
+            nucleus_info = extract_nucleus(chunks, rst_trees)
+            summary = self.planner.summarize(sq, nucleus_info)
+            summaries.append(summary)
+        
+        # Step 5: Verify and supplement
+        while not self.planner.verify(query, summaries):
+            new_query = self.planner.supplement(query, summaries)
+            # repeat retrieval and summarization...
+        
+        # Step 6: Plan and generate
+        plan = self.discourse_parser.create_plan(rhetorical_graph)
+        answer = self.planner.generate(query, summaries, plan)
+        
+        return answer
+            </pre>
+        </div>
+
+        <div class="subsection-title">7.3 Implementation Tips</div>
+        <ul>
+            <li><strong>Start simple:</strong> implement a basic RAG first, then gradually add hierarchical planning and discourse modeling</li>
+            <li><strong>Caching:</strong> cache retrieval results and LLM responses to reduce cost and latency</li>
+            <li><strong>Parallel processing:</strong> run the three searchers in parallel</li>
+            <li><strong>Error handling:</strong> provide fallback solutions when discourse parsing or verification fails</li>
+            <li><strong>Monitoring:</strong> log the performance of each searcher and component for optimization</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <div class="section-title">8. Conclusion</div>
+        
+        <p>
+            We introduced humanoid RAG, a novel framework that combines hierarchical question planning with discourse modeling to address the challenges of traditional RAG systems on complex questions.
+            Our two-level architecture—with a high-level planner for question decomposition and sufficiency verification, and low-level searchers for hybrid retrieval—provides a structured approach to multi-step reasoning.
+        </p>
+        
+        <p>
+            Our two-level discourse modeling—using intra-section RST trees to identify nucleus information and an inter-section rhetorical graph to model relations such as contradiction—enables more accurate and coherent responses.
+            This discourse structure guides response planning and ensures that contradictions are handled correctly and information is presented in a logical order.
+        </p>
+        
+        <div class="warning">
+            <strong>⚠️ Important Reminder:</strong>
+            <p>
+                This research is a conceptual and theoretical study tested only on private data with the LLaMA 7B model.
+                Comprehensive evaluation on public benchmarks and ablation studies are required to validate the claimed benefits.
+            </p>
+        </div>
+        
+        <p>
+            Future work includes evaluation on standard benchmarks, experiments with different language models, and optimization for production environments.
+            We hope that humanoid RAG can serve as a foundation for further research on discourse-aware RAG systems.
+        </p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Acknowledgments</div>
+        <p>
+            This research builds on pioneering work in Retrieval-Augmented Generation (RAG) and discourse modeling.
+            We thank the open-source community and the authors of the LevelRAG and DiscoRAG papers for their inspiring work.
+        </p>
+    </div>
+
+    <div class="references">
+        <div class="section-title">References</div>
+        
+        <div class="reference-item">
+            [1] T. B. Brown et al., "Language Models are Few-Shot Learners," <em>NeurIPS</em>, 2020.
+        </div>
+        
+        <div class="reference-item">
+            [2] H. Touvron et al., "LLaMA: Open and Efficient Foundation Language Models," 
+            <em>arXiv:2302.13971</em>, 2023.
+        </div>
+        
+        <div class="reference-item">
+            [3] P. Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks," 
+            <em>NeurIPS</em>, 2020.
+        </div>
+        
+        <div class="reference-item">
+            [4] A. Asai et al., "Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection," 
+            <em>ICLR</em>, 2024.
+        </div>
+        
+        <div class="reference-item">
+            [5] H. Trivedi et al., "Interleaving Retrieval with Chain-of-Thought Reasoning," 
+            <em>arXiv:2212.10509</em>, 2023.
+        </div>
+        
+        <div class="reference-item">
+            [6] W. C. Mann and S. A. Thompson, "Rhetorical Structure Theory: Toward a Functional Theory of Text Organization," 
+            <em>Text</em>, vol. 8, no. 3, pp. 243-281, 1988.
+        </div>
+        
+        <div class="reference-item">
+            [7] Z. Chen et al., "MindSearch: Mimicking Human Minds Elicits Deep AI Searcher," 
+            <em>arXiv:2407.20183</em>, 2024.
+        </div>
+        
+        <div class="reference-item">
+            [8] L. Gao et al., "Precise Zero-Shot Dense Retrieval without Relevance Labels," 
+            <em>arXiv:2212.10496</em>, 2022.
+        </div>
+        
+        <div class="reference-item">
+            [9] L. Wang et al., "Query2doc: Query Expansion with Large Language Models," 
+            <em>arXiv:2303.07678</em>, 2023.
+        </div>
+        
+        <div class="reference-item">
+            [10] Y. Gao et al., "Retrieval-Augmented Generation for Large Language Models: A Survey," 
+            <em>arXiv:2312.10997</em>, 2024.
+        </div>
+    </div>
+
+    <div class="section" style="margin-top: 60px; padding-top: 20px; border-top: 2px solid #333;">
+        <div class="section-title">Author Information</div>
+        <div class="warning">
+            <strong>Author:</strong> Fardin Ebrahimi<br>
+            <strong>Degree:</strong> B.Sc. in Computer Science<br>
+            <strong>Status:</strong> Independent research - no organizational affiliation<br>
+            <strong>Funding:</strong> This research was not funded by any organization or institution
+        </div>
+        </div>
+    </div>
+
+    <div class="section" style="margin-top: 60px; padding-top: 20px; border-top: 2px solid #333;">
+        <div class="section-title">Notes</div>
+        <div class="note" id="fn-discourse">
+            <strong>Note 1 (Terminology):</strong> “Discourse-aware” means the system pays attention to how sentences connect (contrast, cause, explanation).
+            Simple example: “This USB cable can charge a phone. However, it cannot transfer data.” The word “however” marks a contrast, so the two claims are kept distinct.
+        </div>
+        <div class="note" id="fn-hierarchical">
+            <strong>Note 2 (Why “Hierarchical”):</strong> The system is hierarchical because it works in two levels: a high-level planner that decomposes and verifies questions, and low-level searchers that retrieve evidence. We chose the name to reflect this layered design and the two-level discourse modeling (RST within sections and a rhetorical graph across sections).
+        </div>
+        <div class="note" id="fn-multilevel">
+            <strong>Note 3 (Multi-Level Question Planning):</strong> It means the system first breaks a big question into smaller ones, answers those, then combines them. Simple example: “Can I join a video call?” becomes “Do I have an internet connection?” and “Does my camera and microphone work?” The final answer is built from those sub-answers.
+        </div>
+        <div class="note">
+            <strong>📚 Foundational References:</strong>
+            <p>This research is based on two main arXiv papers:</p>
+            <ol>
+                <li><strong>LevelRAG:</strong> research on hierarchical Retrieval-Augmented Generation (RAG) (available on arXiv)</li>
+                <li><strong>DiscoRAG:</strong> research on discourse-aware Retrieval-Augmented Generation (RAG) (available on arXiv)</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Convert numbers to English
+        function toEnglishNumber(num) {
+            return num.toString();
+        }
+        
+        // Calculate page number based on scroll
+        window.addEventListener('scroll', function() {
+            var pageHeight = 1122; // height of an A4 page (px)
+            var scrollPosition = window.scrollY;
+            var pageNumber = Math.floor(scrollPosition / pageHeight) + 1;
+            
+            var pageNumberElement = document.getElementById('pageNumber');
+            if (pageNumberElement) {
+                // Display in "Page X of Y" format
+                var totalHeight = document.body.scrollHeight;
+                var totalPages = Math.ceil(totalHeight / pageHeight);
+                pageNumberElement.textContent = 'Page ' + toEnglishNumber(pageNumber) + ' of ' + toEnglishNumber(totalPages);
+            }
+        });
+        
+        // Initial page number setup
+        window.addEventListener('load', function() {
+            var pageHeight = 1122;
+            var totalHeight = document.body.scrollHeight;
+            var totalPages = Math.ceil(totalHeight / pageHeight);
+            
+            var pageNumberElement = document.getElementById('pageNumber');
+            if (pageNumberElement) {
+                pageNumberElement.textContent = 'Page ' + toEnglishNumber(1) + ' of ' + toEnglishNumber(totalPages);
+            }
+            
+            console.log('Total pages: ' + totalPages);
+        });
+        
+        // Add page numbers for print
+        window.addEventListener('beforeprint', function() {
+            var pageHeight = 1122; // A4 page height
+            var totalHeight = document.body.scrollHeight;
+            var totalPages = Math.ceil(totalHeight / pageHeight);
+            
+            // Remove old numbers
+            var oldNumbers = document.querySelectorAll('.print-page-number');
+            oldNumbers.forEach(function(el) { el.remove(); });
+            
+            // Add page number to each section
+            var sections = document.querySelectorAll('.section, .abstract-section, .paper-header');
+            var currentPage = 1;
+            
+            sections.forEach(function(section, index) {
+                var sectionTop = section.offsetTop;
+                var pageNum = Math.floor(sectionTop / pageHeight) + 1;
+                
+                if (pageNum !== currentPage) {
+                    currentPage = pageNum;
+                    
+                    // Create page number element
+                    var pageNumberDiv = document.createElement('div');
+                    pageNumberDiv.className = 'print-page-number';
+                    pageNumberDiv.style.position = 'absolute';
+                    pageNumberDiv.style.top = (pageNum * pageHeight - 50) + 'px';
+                    pageNumberDiv.textContent = toEnglishNumber(pageNum);
+                    
+                    document.body.appendChild(pageNumberDiv);
+                }
+            });
+        });
+        
+        // Cleanup after print
+        window.addEventListener('afterprint', function() {
+            var oldNumbers = document.querySelectorAll('.print-page-number');
+            oldNumbers.forEach(function(el) { el.remove(); });
+        });
+    </script>
+
+</body>
+</html>
