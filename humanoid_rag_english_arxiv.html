@@ -1131,6 +1131,21 @@ print("Best match:", docs[best])
             <br>
             <strong>Alternatives:</strong> Bing Web Search API, Google Custom Search, or SerpAPI (these often have free tiers but are usually paid for heavy use).
         </div>
+        <div class="note" id="fn-twolevel">
+            <strong>Note 12 (Two‑Level Discourse Modeling):</strong> We borrow this idea from discourse research: RST explains relations *inside* one section, and rhetorical graphs explain relations *between* sections. We combine them into two levels.
+            <br>
+            <strong>Simple example (inside a section):</strong> “The phone battery is low. So it will shut down soon.” The first sentence is the core idea; the second supports it.
+            <br>
+            <strong>Simple example (between sections):</strong> Section A says “This cable transfers data.” Section B says “Some cables only charge.” The graph marks a contradiction.
+            <br><br>
+            <strong>Benefits:</strong> clearer answers, fewer mixed contradictions, better focus on the main point.
+            <br>
+            <strong>Limitations:</strong> if the discourse parser makes a mistake, the answer can be wrong; it also adds extra computation and can slow the system.
+            <br>
+            <strong>Simple example:</strong> If the system wrongly treats “but” as agreement, it may combine two opposite sentences and give a confused answer.
+            <br><br>
+            <strong>When it struggles (simple):</strong> very long paragraphs, messy punctuation, or mixed topics in one paragraph. Example: “It works great!!! but battery bad?? also camera ok” — the parser may misread the relations and produce a weak answer.
+        </div>
         <div class="note">
             <strong>📚 Foundational References:</strong>
             <p>This research is based on two main arXiv papers:</p>
