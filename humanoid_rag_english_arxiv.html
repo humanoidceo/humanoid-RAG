@@ -558,6 +558,7 @@ Emphasized: "Wi-Fi"^2.0 connection
         <div class="subsubsection-title">4.2.2 Dense Searcher</div>
         <p>
             The dense searcher uses embedding models for semantic retrieval.
+            In this work, we perform dense search using transformer-based embedding models.
             To improve retrieval, we use the HyDE (Hypothetical Document Embeddings) technique:
             the LLM generates a hypothetical document that contains the answer, then the embedding of that
             document is used to retrieve similar real documents.
@@ -1108,6 +1109,15 @@ print("Best match:", docs[best])
                 <li><strong>Word (.docx):</strong> <code>python-docx</code> (most common and reliable for .docx files).</li>
             </ul>
             <strong>Best default choices:</strong> <code>pdfplumber</code> for PDF (accuracy) and <code>python-docx</code> for Word (reliable and standard).
+        </div>
+        <div class="note" id="fn-dense">
+            <strong>Note 10 (Dense Retrieval with Transformers):</strong> Dense search means “search by meaning,” not just exact words. We use transformer models to turn each sentence into a vector, then pick the most similar vectors.
+            <br>
+            <strong>Simple example:</strong> Query: “phone battery fast.” A dense searcher can still match “fast charging smartphone” even if the words are different.
+            <br><br>
+            <strong>Common transformer models for this:</strong> <code>all-MiniLM-L6-v2</code>, <code>all-mpnet-base-v2</code>, <code>e5-base</code>, <code>bge-base-en</code>.
+            <br>
+            <strong>Why these?</strong> They are popular, fast, and give strong results for general semantic search.
         </div>
         <div class="note">
             <strong>📚 Foundational References:</strong>
