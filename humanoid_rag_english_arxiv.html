@@ -1200,6 +1200,13 @@ Output: one short plan only.
             </pre>
             <strong>Expected plan (all four):</strong> “This chair is old. It is cheap, but it is wobbly, so it needs a screw tightened.”
         </div>
+        <div class="note" id="fn-self-rag">
+            <strong>Note 14 (Self‑RAG):</strong> Self‑RAG means the system checks its own answer. It asks itself, “Did I use good evidence?” or “Do I need to search again?”
+            <br>
+            <strong>Simple example:</strong> Question: “Can this USB cable transfer data?” The system first answers “yes” after seeing a sentence about charging. Then it checks and realizes the evidence is about charging only, not data. So it searches again, finds a sentence about data transfer, and updates the answer.
+            <br><br>
+            <strong>Why we mention it:</strong> Because it shows a practical way to reduce wrong answers—by forcing the system to re-check and search again when evidence is weak (evidence = the text or facts found that support the answer).
+        </div>
         <div class="note">
             <strong>📚 Foundational References:</strong>
             <p>This research is based on two main arXiv papers:</p>
