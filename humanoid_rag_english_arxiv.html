@@ -1047,6 +1047,68 @@ class HumanoidRAG:
         <div class="note" id="fn-motivation">
             <strong>Note 7 (Why Single-Step RAG Fails):</strong> It answers too fast with too little. It might find info about Android only, then say “yes” without checking iOS. These questions need two checks and a comparison, not one quick lookup.
         </div>
+        <div class="note" id="fn-sufficiency">
+            <strong>Note 8 (Sufficiency Verification):</strong> This means checking if you have *enough* facts to answer. Simple example: Question: “Is this laptop good for video calls?” If you only know it has a camera, that’s not enough. You still need to know about the microphone and internet connection. The system verifies this and asks for more info if needed.
+        </div>
+        <div class="note" id="fn-sparse">
+            <strong>Note 9 (Sparse Retrieval):</strong> Think of it as “keyword search.” In this paper, we use the <strong>BM25</strong> algorithm for the sparse searcher.
+            <br><br>
+            <strong>How BM25 works:</strong> it gives higher scores to pages that contain your keywords, but it does not over‑reward very long pages.
+            <br>
+            <strong>Example:</strong> If two pages both mention “wireless mouse,” the shorter, more focused page usually gets a higher score.
+            <br><br>
+            <strong>Python library:</strong> You can use the <code>rank_bm25</code> package.
+            <pre style="direction: ltr; text-align: left;">
+# Install the BM25 library
+# pip install rank-bm25
+
+# Import the BM25 tool from the library
+from rank_bm25 import BM25Okapi
+
+# Make a small list of example documents (simple sentences)
+docs = [
+    "wireless mouse with usb receiver",
+    "gaming mouse with rgb lights",
+    "bluetooth wireless mouse for laptop"
+]
+
+# Split each sentence into words (so BM25 can compare words)
+tokenized = [d.split() for d in docs]
+
+# Build the BM25 index from the tokenized documents
+bm25 = BM25Okapi(tokenized)
+
+# Write the search query and split it into words
+query = "wireless mouse".split()
+
+# Get a score for each document (higher = better match)
+scores = bm25.get_scores(query)
+
+# Find the index of the document with the highest score (step by step)
+# 1) len(scores) = how many documents we have
+# 2) range(len(scores)) = all possible indexes: 0, 1, 2, ...
+# 3) key=lambda i: scores[i] = for each index i, look up its score
+# 4) max(...) = pick the index i with the largest score
+best = max(range(len(scores)), key=lambda i: scores[i])
+
+# Print the best matching document
+print("Best match:", docs[best])
+            </pre>
+            <strong>Expected output:</strong> <code>Best match: wireless mouse with usb receiver</code><br>
+            If two sentences have the exact same score, Python’s <code>max</code> returns the first one, so the first matching sentence wins.
+            <strong>What it does:</strong> it picks the sentence with the best keyword match for the query.
+            <br><br>
+            <strong>Why not just ask an LLM to do this?</strong> A simple way to think of it: the LLM is good at *suggesting* search words, but it cannot *look through all your files* by itself. BM25 is like a fast finder: it quickly locates the right pages. Then the LLM reads those pages and gives the answer.
+            <br><br>
+            <strong>Important:</strong> BM25 cannot read PDF or Word files by itself. It only works on plain text. So you must first extract the text from PDF/Word, then run BM25 on that text.
+            <br><br>
+            <strong>Text extraction (Python, simple):</strong>
+            <ul>
+                <li><strong>PDF:</strong> <code>pdfplumber</code> (usually more accurate because it keeps layout and spacing better). A fast alternative is <code>PyMuPDF</code> when speed matters.</li>
+                <li><strong>Word (.docx):</strong> <code>python-docx</code> (most common and reliable for .docx files).</li>
+            </ul>
+            <strong>Best default choices:</strong> <code>pdfplumber</code> for PDF (accuracy) and <code>python-docx</code> for Word (reliable and standard).
+        </div>
         <div class="note">
             <strong>📚 Foundational References:</strong>
             <p>This research is based on two main arXiv papers:</p>
