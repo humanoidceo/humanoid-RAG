@@ -857,6 +857,8 @@ Output: response plan P
             Building RST trees and rhetorical graphs depends on the accuracy of the discourse parser. Errors in identifying rhetorical relations can lead to incorrect responses.
             Parsing accuracy varies by domain and text quality.
         </p>
+        <p><em>Example:</em> in “It is raining, so I take an umbrella,” if the parser flips it, it may think “I take an umbrella, so it is raining,” which is wrong. This kind of mistake happens more with messy text (missing punctuation), very long sentences, informal chat, or domain‑specific jargon (special terms used only in one field, like medicine or law; e.g., hypertension, biopsy, injunction, tort).</p>
+        <p><em>Simple fix:</em> clean and shorten the text, add punctuation, and use a small glossary for jargon; then re‑parse and double‑check key relations (cause vs. result, e.g., “It rained, so the ground is wet” not “The ground is wet, so it rained”).</p>
 
         <div class="subsubsection-title">6.2.3 Dependence on Prompt Engineering</div>
         <p>
