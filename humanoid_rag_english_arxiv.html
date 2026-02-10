@@ -668,11 +668,14 @@ Emphasized: "Wi-Fi"^2.0 connection
             where each node <em>v</em> ∈ <em>V</em> represents a section and each edge <em>e</em> ∈ <em>E</em> represents a rhetorical relation.
             The main relations are:
         </p>
+        <p>
+            <strong>Simple meaning:</strong> <em>G</em> is the whole map, <em>V</em> is the list of sections (each one is a small <em>v</em>), and <em>E</em> is the list of relations between them (each one is a small <em>e</em>).
+        </p>
         <ul>
-            <li><strong>CONTRADICTS:</strong> sections contain conflicting information</li>
-            <li><strong>ELABORATES:</strong> one section elaborates another</li>
-            <li><strong>BACKGROUND_FOR:</strong> one section provides background for another</li>
-            <li><strong>CAUSES:</strong> one section is the cause of another</li>
+            <li><strong>CONTRADICTS:</strong> sections contain conflicting information (e.g., one says “This cable transfers data,” another says “This cable is charge‑only.”)</li>
+            <li><strong>ELABORATES:</strong> one section elaborates another (e.g., one says “The laptop is fast,” another lists the CPU and RAM details.)</li>
+            <li><strong>BACKGROUND_FOR:</strong> one section provides background for another (e.g., one says “This model was released in 2018,” another explains its current performance.)</li>
+            <li><strong>CAUSES:</strong> one section is the cause of another (e.g., “The battery is old” → “The phone shuts down quickly.”)</li>
         </ul>
 
         <div class="definition">
@@ -767,11 +770,12 @@ Output: response plan P
         <ul>
             <li><strong>RST trees:</strong> identify nucleus information and reduce the "lost in the middle" effect</li>
             <li><strong>Rhetorical graph:</strong> detect contradictions and prevent merging conflicting information</li>
-            <li><strong>Planning:</strong> produce coherent responses with logical structure</li>
+            <li><strong>Planning:</strong> produce coherent responses (responses that stay logically connected and easy to follow) with logical structure. <em>Example:</em> "The battery is low, so the laptop shuts down; therefore I plug it in."</li>
         </ul>
         <p>
-            <strong>Expected benefit:</strong> higher accuracy in prioritizing information, better handling of contradictions,
-            and more coherent responses.
+            <strong>Expected benefit:</strong> higher accuracy in prioritizing information(<em>Example:</em> in a long paragraph, it keeps the main point (e.g., "The phone is water‑resistant"
+            and drops extra details.)), better handling of contradictions,
+            and more coherent responses. 
         </p>
 
         <div class="subsection-title">5.2 Conceptual Case Study</div>
