@@ -406,8 +406,26 @@
             This research is based on two main arXiv papers. In very simple terms, each paper solved one big problem:
         </p>
         <ol>
-            <li><strong>LevelRAG:</strong> focuses on hierarchy. It breaks a hard question into smaller questions and answers them step by step. Think of it like solving a big task by splitting it into mini‑tasks.</li>
-            <li><strong>DiscoRAG:</strong> focuses on discourse. It looks at how sentences connect (cause, contrast, background) so the final answer is clear and not mixed up.</li>
+            <li><strong>LevelRAG:</strong> focuses on hierarchy.<br>
+                It treats a big question like a tree of smaller questions.<br>
+                First, it splits the hard question into simple sub‑questions.<br>
+                Then it answers each sub‑question on its own with retrieval.<br>
+                After that, it combines the small answers into one final answer.<br>
+                This prevents missing an important part of the question.<br>
+                It is like using a checklist before giving a final decision.<br>
+                Example: “Is this laptop good for video calls?” becomes camera, microphone, and internet checks.<br>
+                If one part is missing, it knows the final answer is not ready.<br>
+                Result: more complete and reliable answers for multi‑step queries.</li>
+            <li><strong>DiscoRAG:</strong> focuses on discourse (how sentences connect).<br>
+                It looks for relations like cause, contrast, background, and example.<br>
+                This helps it decide which sentence is main and which is supporting.<br>
+                It avoids mixing opposite claims into one statement.<br>
+                It organizes the answer in a clear order for the reader.<br>
+                Think of it like a teacher who explains with “because” and “but.”<br>
+                Example: “The phone is cheap. But it is slow.” should stay as a contrast.<br>
+                If two sources disagree, it highlights the conflict instead of hiding it.<br>
+                So the answer becomes clearer and less confusing.<br>
+                Result: better explanations, not just a list of facts.</li>
         </ol>
         <p>
             <strong>Why we mention them:</strong> LevelRAG teaches us how to plan in levels, and DiscoRAG teaches us how to organize the information. humanoid RAG combines both ideas, so it can plan the steps and also explain the answer clearly.
