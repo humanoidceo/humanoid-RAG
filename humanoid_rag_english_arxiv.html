@@ -883,12 +883,14 @@ Output: response plan P
             The iterative nature of the system (decompose-retrieve-summarize-verify-supplement loop) can lead to significant latency,
             especially for complex questions that require multiple iterations.
         </p>
+        <p><em>Plain-language example:</em> It’s like a person who has to do a task in several rounds: first break the question into parts, then go search for each part, then summarize what they found, then double-check it, and only after that give a final answer. For a simple question, this feels quick, but for a complex one it’s like taking multiple trips back and forth, so the wait time grows.</p>
 
         <div class="subsubsection-title">6.3.2 Cost</div>
         <p>
             Multiple LLM calls and retrieval operations can increase cost, especially when using commercial APIs.
             For high-volume applications, this cost can be significant.
         </p>
+        <p><em>Plain-language example:</em> If you call a paid service several times for each question, the bill adds up quickly. But you can use a local model runner like <em>Ollama</em> (a tool that runs models on your own machine) instead of commercial APIs, and choose a small multi‑billion‑parameter model that fits your computer’s capacity. Try a few different models and see which one gives the best answers for your data. That makes each request much cheaper, as long as you balance response time and quality with your hardware limits.</p>
 
         <div class="subsection-title">6.4 Future Work</div>
         <p>Future work may include:</p>
@@ -899,6 +901,15 @@ Output: response plan P
             <li>Optimization to reduce latency and cost</li>
             <li>Improving discourse parsing accuracy</li>
             <li>Developing caching techniques to reduce repeated LLM calls</li>
+        </ul>
+        <p><em>How to do it (short answers):</em></p>
+        <ul>
+            <li><strong>Public benchmarks:</strong> pick standard datasets, build a fixed evaluation script, and report metrics like EM/F1 (Exact Match and F1 score) so results are comparable. These are used to measure answer correctness in a consistent way: EM checks if the prediction is exactly the same as the gold answer, while F1 measures partial overlap between words. To use them for testing, run your model on a benchmark, compare each output to the gold answer with EM and F1, then average the scores across all questions. <em>Plain‑language example:</em> If the correct answer is “Paris,” EM is 1 only when the model says exactly “Paris.” If it says “Paris, France,” EM becomes 0, but F1 can still be high because most of the words match.</li>
+            <li><strong>Ablations:</strong> remove or disable one component at a time (e.g., discourse parsing) while keeping everything else fixed, then compare quality, latency, and cost.</li>
+            <li><strong>Different LMs:</strong> swap only the model (keep prompts and data the same) and compare answer quality, speed, and price.</li>
+            <li><strong>Latency/cost:</strong> reduce iterations, batch calls, run smaller or quantized models, and parallelize retrieval where possible.</li>
+            <li><strong>Discourse parsing:</strong> use a parser trained on your domain or fine‑tune it, then validate with manual samples.</li>
+            <li><strong>Caching:</strong> caching means “save an answer so you don’t have to do the work again.” In simple terms: before you solve a question, you first check if you already solved the same one; if yes, you reuse it. If not, you solve it and save the result for next time. <em>Does it take too much space?</em> It can, so keep only recent or popular items and delete old ones after a time limit (TTL). <em>Example:</em> If many users ask “What is RAG?”, the system answers once, saves it, and then returns the saved answer instantly for the next users.</li>
         </ul>
     </div>
 
