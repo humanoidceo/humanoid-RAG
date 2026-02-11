@@ -865,12 +865,16 @@ Output: response plan P
             System performance heavily depends on the quality of prompts designed for each operation.
             Poor prompts can lead to incorrect decomposition, insufficient summaries, or failed verification.
         </p>
+        <p><em>Plain-language example:</em> This system is like a multi-step chef who needs a clear instruction at each step. If you only say “make something,” the chef might skip the salt or mix up the steps. But if you say “first chop the ingredients, then saute for 3 minutes, and add salt at the end,” the result is more reliable.</p>
+        <p><em>Bad prompt:</em> <code>Process this text and give me the result.</code> (too vague; it does not say whether to decompose, summarize, or verify)</p>
+        <p><em>Good prompt:</em> <code>Decompose the text into 3 separate sub-questions. For each sub-question: 1) provide a 2-sentence evidence summary, 2) if evidence is insufficient, say “insufficient.” Return a numbered list.</code></p>
 
         <div class="subsubsection-title">6.2.4 Retrieval Coverage</div>
         <p>
             Despite using three searchers, some relevant information may still be missed,
             especially if it does not exist in the local dataset or is phrased in a way that does not match the query.
         </p>
+        <p><em>Plain-language example:</em> You ask three friends to find your phone charger in the house. One looks in the living room, one in the kitchen, one in your backpack. If the charger is actually in the car or labeled “USB‑C cable” instead of “charger,” they might still miss it.</p>
 
         <div class="subsection-title">6.3 Practical Limitations</div>
         
