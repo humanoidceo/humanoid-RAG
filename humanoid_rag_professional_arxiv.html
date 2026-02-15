@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Humanoid RAG: Discourse-Aware Hierarchical Retrieval-Augmented Generation</title>
+    <link rel="stylesheet" href="arxiv_professional.css">
+</head>
+<body>
+    <main class="paper">
+        <header class="header">
+            <h1 class="title">Humanoid RAG: A Discourse-Aware Hierarchical Retrieval-Augmented Generation Architecture with Multi-Stage Question Planning</h1>
+            <p class="authors">Fardin Ibrahimi</p>
+            <p class="affiliation">Independent AI Researcher</p>
+            <p class="date">February 2026</p>
+        </header>
+
+        <section class="abstract">
+            <h2>Abstract</h2>
+            <p>
+                Retrieval-Augmented Generation (RAG) systems typically degrade under compositional, cross-document, and contradiction-sensitive queries.
+                This manuscript presents Humanoid RAG, a discourse-aware hierarchical architecture that separates global planning from local evidence retrieval.
+                The framework combines: (i) multi-stage question decomposition, (ii) hybrid retrieval through sparse, dense, and web channels,
+                (iii) discourse-informed evidence weighting, and (iv) iterative sufficiency verification before answer synthesis.
+                Beyond conceptual description, this version provides an implementation-oriented specification with detailed Python snippets covering
+                indexing, fusion, planning, discourse reranking, orchestration, and evaluation.
+            </p>
+            <p class="keywords"><strong>Keywords:</strong> retrieval-augmented generation, hierarchical planning, discourse modeling, hybrid search, multi-hop question answering</p>
+        </section>
+
+        <section class="section">
+            <h2>1. Introduction</h2>
+            <p>
+                Parametric language models remain vulnerable to temporal staleness, missing domain evidence, and unsupported synthesis.
+                RAG mitigates these limitations by conditioning generation on retrieved external evidence. However, standard single-pass pipelines
+                remain weak in three settings: compositional reasoning, information conflict resolution, and coverage verification.
+            </p>
+            <p>
+                Humanoid RAG addresses these deficiencies through a strict separation of responsibilities.
+                A high-level planner controls decomposition, adequacy checks, and supplementation strategy;
+                low-level retrieval modules specialize in heterogeneous evidence collection.
+                A discourse layer provides salience and relation-aware weighting prior to generation.
+            </p>
+            <h3>1.1 Research Lineage and Attribution</h3>
+            <p>
+                This manuscript is explicitly grounded in two prior works: <em>LevelRAG</em> [9] and <em>Disco-RAG</em> [10].
+                The hierarchical planning and multi-searcher orchestration are derived from the LevelRAG paradigm,
+                while discourse-structured evidence modeling (intra-chunk trees and inter-chunk rhetorical relations)
+                follows the Disco-RAG paradigm.
+            </p>
+            <p>
+                Accordingly, the contribution of this document is an integrated system specification and implementation-oriented
+                synthesis under the Humanoid RAG configuration. It does not claim origin of the foundational paradigms above.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>2. Problem Formulation</h2>
+            <p>
+                Let <em>q</em> denote the user query, and let <em>C</em> be a corpus segmented into passages.
+                The objective is to produce an answer <em>a</em> and evidence set <em>E</em> such that
+                (i) relevance to <em>q</em> is maximized, (ii) factual support is explicit, and
+                (iii) contradictions are either resolved or surfaced.
+            </p>
+            <div class="equation">
+                (a, E) = arg max F(a, E | q, C) <span class="eq-num">(1)</span>
+            </div>
+            <p>
+                The planner generates a sub-query set S = {s1, s2, ..., sn}. For each sub-query, the retriever returns candidate evidence,
+                which is rescored through discourse-aware signals prior to final synthesis.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>3. Architecture Overview</h2>
+            <div class="figure">
+<pre>
+User Query
+   |
+   v
+[High-Level Planner]
+   |-- Decompose
+   |-- Verify Sufficiency
+   |-- Supplement if Needed
+   v
+[Hybrid Retrieval Layer]
+   |-- Sparse Retriever (BM25)
+   |-- Dense Retriever (Embedding + Vector Index)
+   |-- Web Retriever (Optional External Evidence)
+   v
+[Discourse Layer]
+   |-- Intra-passage salience (nucleus weighting)
+   |-- Inter-passage relation graph (support/contrast/entailment)
+   v
+[Answer Synthesizer]
+   |-- Citation-grounded generation
+   |-- Structured final response
+</pre>
+                <div class="caption">Figure 1: Functional decomposition of the Humanoid RAG pipeline.</div>
+            </div>
+            <p>
+                The architecture is intentionally modular. Each component can be benchmarked or replaced independently,
+                enabling controlled ablation and production hardening.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>4. Methodological Components</h2>
+
+            <h3>4.1 Hierarchical Query Planning</h3>
+            <p>
+                The planner transforms q into atomic, verifiable sub-queries. It also returns dependency edges and expected evidence types.
+                This prevents retrieval collapse where a single broad query overfits to dominant lexical features.
+            </p>
+
+            <h3>4.2 Hybrid Retrieval and Rank Fusion</h3>
+            <p>
+                Sparse retrieval captures exact lexical anchors; dense retrieval captures semantic neighbors;
+                web retrieval extends coverage for out-of-corpus facts. Candidate lists are merged using Reciprocal Rank Fusion (RRF),
+                followed by score calibration.
+            </p>
+
+            <h3>4.3 Discourse-Aware Evidence Weighting</h3>
+            <p>
+                Evidence passages are assigned additional weights using discourse signals:
+                nucleus prominence, rhetorical relation confidence, and contradiction risk.
+                This reduces the probability of generation from peripheral or unsupported fragments.
+            </p>
+
+            <h3>4.4 Sufficiency Verification and Supplementation</h3>
+            <p>
+                Before final generation, the planner evaluates whether current evidence satisfies all sub-queries.
+                Missing slots trigger targeted supplemental queries rather than repeating the entire retrieval cycle.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>5. End-to-End Python Implementation</h2>
+            <p>
+                This section provides a practical reference implementation. The code is organized for direct translation into a production repository.
+            </p>
+
+            <h3>5.1 Core Data Structures</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/types.py
+from dataclasses import dataclass, field
+from typing import Dict, List, Literal, Optional
+
+Channel = Literal["sparse", "dense", "web"]
+
+@dataclass
+class QueryPlan:
+    root_query: str
+    sub_queries: List[str]
+    dependencies: Dict[str, List[str]] = field(default_factory=dict)
+    expected_evidence: Dict[str, List[str]] = field(default_factory=dict)
+
+@dataclass
+class Evidence:
+    doc_id: str
+    chunk_id: str
+    text: str
+    channel: Channel
+    base_score: float
+    metadata: Dict[str, str] = field(default_factory=dict)
+    discourse_score: float = 0.0
+    fused_score: float = 0.0
+
+@dataclass
+class SufficiencyReport:
+    sufficient: bool
+    missing_sub_queries: List[str] = field(default_factory=list)
+    rationale: str = ""
+
+@dataclass
+class AnswerBundle:
+    answer: str
+    citations: List[str]
+    evidence: List[Evidence]</code></pre>
+            </div>
+
+            <h3>5.2 Corpus Preparation and Index Construction</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/indexing.py
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Iterable, List
+
+import faiss
+import numpy as np
+from rank_bm25 import BM25Okapi
+from sentence_transformers import SentenceTransformer
+
+@dataclass
+class Chunk:
+    doc_id: str
+    chunk_id: str
+    text: str
+
+class Chunker:
+    def __init__(self, max_tokens: int = 220, overlap: int = 40) -> None:
+        self.max_tokens = max_tokens
+        self.overlap = overlap
+
+    def split(self, doc_id: str, text: str) -> List[Chunk]:
+        tokens = text.split()
+        chunks: List[Chunk] = []
+        start = 0
+        cid = 0
+        while start &lt; len(tokens):
+            end = min(start + self.max_tokens, len(tokens))
+            part = " ".join(tokens[start:end]).strip()
+            if part:
+                chunks.append(Chunk(doc_id=doc_id, chunk_id=f"{doc_id}:{cid}", text=part))
+                cid += 1
+            if end == len(tokens):
+                break
+            start = max(0, end - self.overlap)
+        return chunks
+
+class HybridIndex:
+    def __init__(self, model_name: str = "intfloat/e5-base-v2") -> None:
+        self.embedder = SentenceTransformer(model_name)
+        self.chunks: List[Chunk] = []
+        self.bm25: BM25Okapi | None = None
+        self.faiss_index: faiss.IndexFlatIP | None = None
+        self.embeddings: np.ndarray | None = None
+
+    def build(self, chunks: Iterable[Chunk]) -> None:
+        self.chunks = list(chunks)
+        tokenized = [c.text.lower().split() for c in self.chunks]
+        self.bm25 = BM25Okapi(tokenized)
+
+        matrix = self.embedder.encode(
+            [c.text for c in self.chunks],
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=True,
+        ).astype("float32")
+
+        self.embeddings = matrix
+        self.faiss_index = faiss.IndexFlatIP(matrix.shape[1])
+        self.faiss_index.add(matrix)
+
+    def save(self, path_prefix: str) -> None:
+        assert self.faiss_index is not None
+        faiss.write_index(self.faiss_index, f"{path_prefix}.faiss")
+        np.save(f"{path_prefix}.emb.npy", self.embeddings)
+        with open(f"{path_prefix}.chunks.tsv", "w", encoding="utf-8") as f:
+            for c in self.chunks:
+                f.write(f"{c.doc_id}\t{c.chunk_id}\t{c.text}\n")</code></pre>
+            </div>
+
+            <h3>5.3 Retrieval Modules and Reciprocal Rank Fusion</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/retrieval.py
+from __future__ import annotations
+from typing import Dict, List, Tuple
+
+import numpy as np
+
+from humanoid_rag.types import Evidence
+from humanoid_rag.indexing import HybridIndex
+
+
+def _rrf(rank: int, k: int = 60) -> float:
+    return 1.0 / (k + rank)
+
+class SparseRetriever:
+    def __init__(self, index: HybridIndex) -> None:
+        self.index = index
+
+    def search(self, query: str, top_k: int = 15) -> List[Evidence]:
+        assert self.index.bm25 is not None
+        scores = self.index.bm25.get_scores(query.lower().split())
+        ids = np.argsort(scores)[::-1][:top_k]
+        results: List[Evidence] = []
+        for i in ids:
+            chunk = self.index.chunks[int(i)]
+            results.append(
+                Evidence(
+                    doc_id=chunk.doc_id,
+                    chunk_id=chunk.chunk_id,
+                    text=chunk.text,
+                    channel="sparse",
+                    base_score=float(scores[i]),
+                )
+            )
+        return results
+
+class DenseRetriever:
+    def __init__(self, index: HybridIndex) -> None:
+        self.index = index
+
+    def search(self, query: str, top_k: int = 15) -> List[Evidence]:
+        assert self.index.faiss_index is not None
+        qv = self.index.embedder.encode(
+            [query], normalize_embeddings=True, convert_to_numpy=True
+        ).astype("float32")
+        scores, idx = self.index.faiss_index.search(qv, top_k)
+
+        results: List[Evidence] = []
+        for score, i in zip(scores[0], idx[0]):
+            chunk = self.index.chunks[int(i)]
+            results.append(
+                Evidence(
+                    doc_id=chunk.doc_id,
+                    chunk_id=chunk.chunk_id,
+                    text=chunk.text,
+                    channel="dense",
+                    base_score=float(score),
+                )
+            )
+        return results
+
+class Fuser:
+    def merge(self, channel_results: Dict[str, List[Evidence]], top_k: int = 20) -> List[Evidence]:
+        table: Dict[str, Evidence] = {}
+
+        for _, rows in channel_results.items():
+            for rank, ev in enumerate(rows, start=1):
+                key = ev.chunk_id
+                contribution = _rrf(rank)
+                if key not in table:
+                    table[key] = ev
+                    table[key].fused_score = contribution
+                else:
+                    table[key].fused_score += contribution
+                    if ev.base_score &gt; table[key].base_score:
+                        table[key].base_score = ev.base_score
+
+        merged = sorted(table.values(), key=lambda x: x.fused_score, reverse=True)
+        return merged[:top_k]</code></pre>
+            </div>
+
+            <h3>5.4 Planner Interface: Decompose, Verify, Supplement</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/planner.py
+from __future__ import annotations
+import json
+from typing import List
+
+from openai import OpenAI
+
+from humanoid_rag.types import QueryPlan, SufficiencyReport
+
+
+class Planner:
+    def __init__(self, model: str, api_key: str) -> None:
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+
+    def decompose(self, query: str) -> QueryPlan:
+        prompt = f"""
+You are a retrieval planner.
+Decompose the query into atomic, non-overlapping sub-queries.
+Return strict JSON with keys:
+- sub_queries: list[str]
+- dependencies: dict[str, list[str]]
+- expected_evidence: dict[str, list[str]]
+
+Query: {query}
+""".strip()
+
+        resp = self.client.responses.create(
+            model=self.model,
+            input=prompt,
+            temperature=0,
+        )
+        payload = json.loads(resp.output_text)
+        return QueryPlan(
+            root_query=query,
+            sub_queries=payload["sub_queries"],
+            dependencies=payload.get("dependencies", {}),
+            expected_evidence=payload.get("expected_evidence", {}),
+        )
+
+    def verify(self, query: str, summaries: List[str]) -> SufficiencyReport:
+        prompt = f"""
+Evaluate whether the evidence summaries are sufficient to answer the query.
+Return strict JSON:
+- sufficient: bool
+- missing_sub_queries: list[str]
+- rationale: str
+
+Query: {query}
+Summaries:
+{chr(10).join(f"- {s}" for s in summaries)}
+""".strip()
+
+        resp = self.client.responses.create(model=self.model, input=prompt, temperature=0)
+        payload = json.loads(resp.output_text)
+        return SufficiencyReport(
+            sufficient=bool(payload["sufficient"]),
+            missing_sub_queries=payload.get("missing_sub_queries", []),
+            rationale=payload.get("rationale", ""),
+        )
+
+    def supplement(self, query: str, missing_sub_queries: List[str]) -> List[str]:
+        prompt = f"""
+Generate targeted supplemental queries that fill only the identified evidence gaps.
+Return strict JSON with key: supplemental_queries (list[str]).
+
+Original query: {query}
+Missing sub-queries: {missing_sub_queries}
+""".strip()
+
+        resp = self.client.responses.create(model=self.model, input=prompt, temperature=0)
+        payload = json.loads(resp.output_text)
+        return payload["supplemental_queries"]</code></pre>
+            </div>
+
+            <h3>5.5 Discourse Reranking Layer</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/discourse.py
+from __future__ import annotations
+from typing import Iterable, List
+
+from humanoid_rag.types import Evidence
+
+
+class DiscourseScorer:
+    """
+    The scorer can be connected to an external RST parser.
+    When parser output is unavailable, a conservative heuristic is used.
+    """
+
+    def __init__(self, nucleus_bonus: float = 0.15, contrast_penalty: float = 0.1) -> None:
+        self.nucleus_bonus = nucleus_bonus
+        self.contrast_penalty = contrast_penalty
+
+    def _estimate_nucleus_ratio(self, text: str) -> float:
+        # Heuristic fallback: first two declarative sentences often carry central claims.
+        sentences = [s.strip() for s in text.split(".") if s.strip()]
+        if not sentences:
+            return 0.0
+        nucleus = min(2, len(sentences))
+        return nucleus / len(sentences)
+
+    def _contradiction_risk(self, text: str) -> float:
+        lowered = text.lower()
+        markers = ["however", "in contrast", "on the other hand", "conflicting"]
+        hits = sum(1 for m in markers if m in lowered)
+        return min(0.3, 0.08 * hits)
+
+    def score(self, evidence: Evidence) -> float:
+        salience = self._estimate_nucleus_ratio(evidence.text) * self.nucleus_bonus
+        risk = self._contradiction_risk(evidence.text) * self.contrast_penalty
+        return salience - risk
+
+    def apply(self, rows: Iterable[Evidence]) -> List[Evidence]:
+        out: List[Evidence] = []
+        for ev in rows:
+            ev.discourse_score = self.score(ev)
+            ev.fused_score = ev.fused_score + ev.discourse_score
+            out.append(ev)
+        return sorted(out, key=lambda x: x.fused_score, reverse=True)</code></pre>
+            </div>
+
+            <h3>5.6 Orchestrator with Iterative Sufficiency Control</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/pipeline.py
+from __future__ import annotations
+from typing import Dict, List
+
+from humanoid_rag.discourse import DiscourseScorer
+from humanoid_rag.retrieval import DenseRetriever, Fuser, SparseRetriever
+from humanoid_rag.types import AnswerBundle, Evidence
+
+
+class HumanoidRAG:
+    def __init__(self, planner, sparse: SparseRetriever, dense: DenseRetriever, synthesizer) -> None:
+        self.planner = planner
+        self.sparse = sparse
+        self.dense = dense
+        self.fuser = Fuser()
+        self.discourse = DiscourseScorer()
+        self.synthesizer = synthesizer
+
+    def _retrieve_for_query(self, q: str, top_k: int = 12) -> List[Evidence]:
+        sparse_rows = self.sparse.search(q, top_k=top_k)
+        dense_rows = self.dense.search(q, top_k=top_k)
+
+        fused = self.fuser.merge(
+            {
+                "sparse": sparse_rows,
+                "dense": dense_rows,
+            },
+            top_k=top_k,
+        )
+        return self.discourse.apply(fused)
+
+    def answer(self, query: str, max_rounds: int = 3) -> AnswerBundle:
+        plan = self.planner.decompose(query)
+        collected: Dict[str, List[Evidence]] = {}
+
+        for sq in plan.sub_queries:
+            collected[sq] = self._retrieve_for_query(sq)
+
+        for _ in range(max_rounds):
+            summaries = [
+                self.synthesizer.summarize_subquery(sq, collected[sq][:5])
+                for sq in plan.sub_queries
+            ]
+            report = self.planner.verify(query, summaries)
+            if report.sufficient:
+                break
+
+            supplemental = self.planner.supplement(query, report.missing_sub_queries)
+            for sq in supplemental:
+                if sq not in collected:
+                    collected[sq] = self._retrieve_for_query(sq)
+                    plan.sub_queries.append(sq)
+
+        final_evidence = []
+        for sq in plan.sub_queries:
+            final_evidence.extend(collected[sq][:3])
+
+        answer, citations = self.synthesizer.generate_answer(query, final_evidence)
+        return AnswerBundle(answer=answer, citations=citations, evidence=final_evidence)</code></pre>
+            </div>
+
+            <h3>5.7 Citation-Grounded Synthesis</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/synthesis.py
+from __future__ import annotations
+from typing import List, Tuple
+
+from openai import OpenAI
+
+from humanoid_rag.types import Evidence
+
+
+class Synthesizer:
+    def __init__(self, model: str, api_key: str) -> None:
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+
+    def summarize_subquery(self, sub_query: str, evidence: List[Evidence]) -> str:
+        context = "\n".join(
+            f"[{i+1}] {ev.text}" for i, ev in enumerate(evidence)
+        )
+        prompt = f"""
+Summarize evidence for the sub-query with high factual precision.
+Sub-query: {sub_query}
+Evidence:
+{context}
+""".strip()
+
+        resp = self.client.responses.create(model=self.model, input=prompt, temperature=0)
+        return resp.output_text.strip()
+
+    def generate_answer(self, query: str, evidence: List[Evidence]) -> Tuple[str, List[str]]:
+        context_lines = []
+        citations = []
+        for i, ev in enumerate(evidence, start=1):
+            cid = f"E{i}"
+            context_lines.append(f"[{cid}] {ev.text}")
+            citations.append(f"{cid}:{ev.doc_id}:{ev.chunk_id}")
+
+        prompt = f"""
+Produce a technically precise answer.
+Requirements:
+1) Use only evidence provided below.
+2) When uncertainty remains, state it explicitly.
+3) Cite evidence ids inline, e.g., [E3].
+
+Query: {query}
+Evidence:
+{chr(10).join(context_lines)}
+""".strip()
+
+        resp = self.client.responses.create(model=self.model, input=prompt, temperature=0)
+        return resp.output_text.strip(), citations</code></pre>
+            </div>
+
+            <h3>5.8 Evaluation Harness</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: humanoid_rag/eval.py
+from __future__ import annotations
+import re
+from dataclasses import dataclass
+from typing import List
+
+
+@dataclass
+class EvalSample:
+    question: str
+    gold_answer: str
+    prediction: str
+
+
+def normalize(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^a-z0-9\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def exact_match(gold: str, pred: str) -> float:
+    return float(normalize(gold) == normalize(pred))
+
+
+def f1_score(gold: str, pred: str) -> float:
+    g = normalize(gold).split()
+    p = normalize(pred).split()
+    if not g or not p:
+        return 0.0
+
+    common = {}
+    for tok in g:
+        common[tok] = min(g.count(tok), p.count(tok))
+    overlap = sum(common.values())
+    if overlap == 0:
+        return 0.0
+
+    precision = overlap / len(p)
+    recall = overlap / len(g)
+    return 2 * precision * recall / (precision + recall)
+
+
+def evaluate(rows: List[EvalSample]) -> dict:
+    em = sum(exact_match(r.gold_answer, r.prediction) for r in rows) / len(rows)
+    f1 = sum(f1_score(r.gold_answer, r.prediction) for r in rows) / len(rows)
+    return {
+        "exact_match": round(em, 4),
+        "token_f1": round(f1, 4),
+        "n": len(rows),
+    }</code></pre>
+            </div>
+
+            <h3>5.9 Minimal Runtime Entrypoint</h3>
+            <div class="code-block">
+<pre><code class="language-python"># file: run_pipeline.py
+import os
+
+from humanoid_rag.indexing import Chunker, HybridIndex
+from humanoid_rag.planner import Planner
+from humanoid_rag.retrieval import DenseRetriever, SparseRetriever
+from humanoid_rag.pipeline import HumanoidRAG
+from humanoid_rag.synthesis import Synthesizer
+
+
+def build_system(documents):
+    chunker = Chunker(max_tokens=220, overlap=40)
+    chunks = []
+    for doc_id, text in documents:
+        chunks.extend(chunker.split(doc_id, text))
+
+    index = HybridIndex(model_name="intfloat/e5-base-v2")
+    index.build(chunks)
+
+    api_key = os.environ["OPENAI_API_KEY"]
+    planner = Planner(model="gpt-4.1-mini", api_key=api_key)
+    synth = Synthesizer(model="gpt-4.1-mini", api_key=api_key)
+
+    rag = HumanoidRAG(
+        planner=planner,
+        sparse=SparseRetriever(index),
+        dense=DenseRetriever(index),
+        synthesizer=synth,
+    )
+    return rag
+
+
+if __name__ == "__main__":
+    docs = [
+        ("doc-1", "RAG architecture notes and retrieval design details."),
+        ("doc-2", "Discourse analysis can improve salience in generation pipelines."),
+    ]
+    system = build_system(docs)
+    result = system.answer("How does discourse-aware hierarchical RAG improve multi-hop QA?")
+    print("ANSWER:\n", result.answer)
+    print("CITATIONS:\n", "\n".join(result.citations))</code></pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>6. Experimental Protocol (Recommended)</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dimension</th>
+                            <th>Protocol</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Datasets</td>
+                            <td>Use at least one single-hop and one multi-hop benchmark (e.g., NQ + HotpotQA).</td>
+                        </tr>
+                        <tr>
+                            <td>Baselines</td>
+                            <td>Compare against vanilla RAG, decomposition-only RAG, and discourse-only reranking.</td>
+                        </tr>
+                        <tr>
+                            <td>Primary Metrics</td>
+                            <td>Exact Match, token F1, citation precision, contradiction rate.</td>
+                        </tr>
+                        <tr>
+                            <td>Ablations</td>
+                            <td>Remove each component independently: planner, dense channel, discourse layer, verification loop.</td>
+                        </tr>
+                        <tr>
+                            <td>Latency and Cost</td>
+                            <td>Report p50/p95 latency, average tokens per query, and retrieval overhead per channel.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>7. Deployment Considerations</h2>
+            <h3>7.1 Reliability Controls</h3>
+            <ul>
+                <li>Cache retrieval results for repeated sub-queries.</li>
+                <li>Enforce strict JSON outputs from planning and verification models.</li>
+                <li>Use timeout and fallback strategies per retrieval channel.</li>
+                <li>Log planner decisions for post-hoc error analysis.</li>
+            </ul>
+
+            <h3>7.2 Security and Compliance</h3>
+            <ul>
+                <li>Redact personally identifiable information during indexing.</li>
+                <li>Store provenance metadata for every evidence chunk.</li>
+                <li>Restrict external web retrieval for regulated deployments.</li>
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2>8. Conclusion</h2>
+            <p>
+                This professional revision formalizes Humanoid RAG as a reproducible architecture rather than a conceptual sketch.
+                The design integrates hierarchical planning, hybrid retrieval, discourse-aware scoring, and iterative sufficiency control.
+                The provided Python snippets define a concrete implementation path suitable for research benchmarking and production prototyping.
+            </p>
+            <p>
+                Empirical claims should be validated through controlled ablations and public benchmark reporting.
+                Nevertheless, the system-level decomposition in this manuscript is directly implementable and structurally aligned with modern RAG engineering practice.
+            </p>
+        </section>
+
+        <section class="references">
+            <h2>References</h2>
+            <p class="reference-item">[1] Lewis, P. et al. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. NeurIPS, 2020.</p>
+            <p class="reference-item">[2] Asai, A. et al. Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection. ICLR, 2024.</p>
+            <p class="reference-item">[3] Trivedi, H. et al. Interleaving Retrieval with Chain-of-Thought Reasoning. arXiv:2212.10509, 2023.</p>
+            <p class="reference-item">[4] Gao, L. et al. Precise Zero-Shot Dense Retrieval without Relevance Labels. arXiv:2212.10496, 2022.</p>
+            <p class="reference-item">[5] Mann, W. and Thompson, S. Rhetorical Structure Theory: Toward a Functional Theory of Text Organization. Text, 1988.</p>
+            <p class="reference-item">[6] Gao, Y. et al. Retrieval-Augmented Generation for Large Language Models: A Survey. arXiv:2312.10997, 2024.</p>
+            <p class="reference-item">[7] Touvron, H. et al. LLaMA: Open and Efficient Foundation Language Models. arXiv:2302.13971, 2023.</p>
+            <p class="reference-item">[8] Johnson, J. et al. Billion-Scale Similarity Search with GPUs. IEEE Transactions on Big Data, 2019.</p>
+            <p class="reference-item">[9] Zhang, Z., Feng, Y., and Zhang, M. LevelRAG: Enhancing Retrieval-Augmented Generation with Multi-hop Logic Planning over Rewriting Augmented Searchers. arXiv:2502.18139, 2025.</p>
+            <p class="reference-item">[10] Liu, D. et al. Disco-RAG: Discourse-Aware Retrieval-Augmented Generation. arXiv:2601.04377, 2026.</p>
+        </section>
+
+       
+    </main>
+</body>
+</html>
