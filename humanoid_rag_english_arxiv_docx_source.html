@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>humanoid RAG: A Discourse-Aware Hierarchical Retrieval-Augmented Generation (RAG) System with Multi-Level Question Planning</title>
-    <link rel="stylesheet" href="style.css">
     <style>
         /* arXiv-like style with LTR direction */
         body {
@@ -299,7 +298,6 @@
 </head>
 <body>
     <!-- Page number -->
-    <div class="page-number" id="pageNumber">Page 1</div>
     
     <div class="paper-header">
         <div class="paper-title">
@@ -1129,115 +1127,6 @@ class HumanoidRAG:
         </div>
     </div>
 
-    <script>
-        // Convert numbers to English
-        function toEnglishNumber(num) {
-            return num.toString();
-        }
-        
-        // Calculate page number based on scroll
-        window.addEventListener('scroll', function() {
-            var pageHeight = 1122; // height of an A4 page (px)
-            var scrollPosition = window.scrollY;
-            var pageNumber = Math.floor(scrollPosition / pageHeight) + 1;
-            
-            var pageNumberElement = document.getElementById('pageNumber');
-            if (pageNumberElement) {
-                // Display in "Page X of Y" format
-                var totalHeight = document.body.scrollHeight;
-                var totalPages = Math.ceil(totalHeight / pageHeight);
-                pageNumberElement.textContent = 'Page ' + toEnglishNumber(pageNumber) + ' of ' + toEnglishNumber(totalPages);
-            }
-        });
-        
-        // Initial page number setup
-        window.addEventListener('load', function() {
-            var pageHeight = 1122;
-            var totalHeight = document.body.scrollHeight;
-            var totalPages = Math.ceil(totalHeight / pageHeight);
-            
-            var pageNumberElement = document.getElementById('pageNumber');
-            if (pageNumberElement) {
-                pageNumberElement.textContent = 'Page ' + toEnglishNumber(1) + ' of ' + toEnglishNumber(totalPages);
-            }
-            
-            console.log('Total pages: ' + totalPages);
-        });
-        
-        function mmToPx(mm) {
-            var probe = document.createElement('div');
-            probe.style.position = 'absolute';
-            probe.style.visibility = 'hidden';
-            probe.style.height = mm + 'mm';
-            probe.style.width = '1px';
-            document.body.appendChild(probe);
-            var px = probe.getBoundingClientRect().height;
-            document.body.removeChild(probe);
-            return px;
-        }
-
-        function clearPrintNumbers() {
-            var oldNumbers = document.querySelectorAll('.print-page-number.dynamic');
-            oldNumbers.forEach(function(el) { el.remove(); });
-        }
-
-        function renderPrintNumbers() {
-            clearPrintNumbers();
-
-            // A4 page height in mm
-            var pageHeightPx = mmToPx(297);
-            if (!pageHeightPx || !isFinite(pageHeightPx)) {
-                return;
-            }
-
-            var totalHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-            var totalPages = Math.max(1, Math.ceil(totalHeight / pageHeightPx));
-            var bottomOffset = mmToPx(10); // keep above bottom margin
-
-            for (var pageNum = 1; pageNum <= totalPages; pageNum++) {
-                var pageNumberDiv = document.createElement('div');
-                pageNumberDiv.className = 'print-page-number dynamic';
-                pageNumberDiv.style.position = 'absolute';
-                pageNumberDiv.style.left = '50%';
-                pageNumberDiv.style.transform = 'translateX(-50%)';
-                pageNumberDiv.style.top = (pageNum * pageHeightPx - bottomOffset) + 'px';
-                pageNumberDiv.textContent = 'Page ' + pageNum + ' of ' + totalPages;
-                document.body.appendChild(pageNumberDiv);
-            }
-        }
-
-        function setupPrintListeners() {
-            window.addEventListener('beforeprint', function() {
-                setTimeout(renderPrintNumbers, 0);
-            });
-            window.addEventListener('afterprint', clearPrintNumbers);
-            window.onbeforeprint = function() { setTimeout(renderPrintNumbers, 0); };
-            window.onafterprint = clearPrintNumbers;
-
-            if (window.matchMedia) {
-                var mediaQueryList = window.matchMedia('print');
-                if (mediaQueryList.addEventListener) {
-                    mediaQueryList.addEventListener('change', function(e) {
-                        if (e.matches) {
-                            setTimeout(renderPrintNumbers, 0);
-                        } else {
-                            clearPrintNumbers();
-                        }
-                    });
-                } else if (mediaQueryList.addListener) {
-                    mediaQueryList.addListener(function(mql) {
-                        if (mql.matches) {
-                            setTimeout(renderPrintNumbers, 0);
-                        } else {
-                            clearPrintNumbers();
-                        }
-                    });
-                }
-            }
-        }
-
-        setupPrintListeners();
-    </script>
 
 </body>
 </html>
